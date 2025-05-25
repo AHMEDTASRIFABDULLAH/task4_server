@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const app = express();
 require("dotenv").config();
+app.use(express.json());
 const port = process.env.PORT || 5000;
 const { MongoClient, ServerApiVersion } = require("mongodb");
 const corsOptions = {
@@ -21,6 +22,44 @@ const client = new MongoClient(uri, {
 });
 async function run() {
   try {
+    const db = client.db("userAppDB");
+    const usersCollection = db.collection("usersCollection");
+    app.post("/register", async (req, res) => {
+      const user = req.body;
+      const email = user.email;
+      const existingUser = await usersCollection.findOne({ email });
+      if (existingUser) {
+        if (existingUser.status === "blocked") {
+          return res.send({ message: "You are blocked. Contact support." });
+        } else {
+          return res.send({
+            message: "You are already registered. Please login.",
+          });
+        }
+      }
+      const result = await usersCollection.insertOne(user);
+      res.send(result);
+    });
+
+    app.post("/login", async (req, res) => {
+      const { email, password } = req.body;
+      const user = await usersCollection.findOne({ email });
+      if (!user) {
+        return res.status(404).send({ message: "Please register first." });
+      }
+      if (user.password !== password) {
+        return res.status(401).send({ message: "Invalid email or password." });
+      }
+      if (user.status === "blocked") {
+        return res.status(403).send({ message: "Your account is blocked" });
+      }
+      res.send({ message: "Login successful", user });
+    });
+
+    app.get("/users", async (req, res) => {
+      const result = await usersCollection.find().toArray();
+      res.send(result);
+    });
   } finally {
   }
 }
