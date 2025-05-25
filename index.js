@@ -6,7 +6,7 @@ app.use(express.json());
 const port = process.env.PORT || 5000;
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const corsOptions = {
-  origin: ["http://localhost:5173"],
+  origin: ["https://itransition4.netlify.app"],
   credentials: true,
   optionSuccessStatus: 200,
 };
@@ -30,9 +30,11 @@ async function run() {
       const existingUser = await usersCollection.findOne({ email });
       if (existingUser) {
         if (existingUser.status === "blocked") {
-          return res.send({ message: "You are blocked. Contact support." });
+          return res
+            .status(404)
+            .send({ message: "You are blocked. Contact support." });
         } else {
-          return res.send({
+          return res.status(404).send({
             message: "You are already registered. Please login.",
           });
         }
