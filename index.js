@@ -24,23 +24,30 @@ async function run() {
   try {
     const db = client.db("userAppDB");
     const usersCollection = db.collection("usersCollection");
+    await usersCollection.createIndex({ email: 1 }, { unique: true });
     app.post("/register", async (req, res) => {
       const user = req.body;
       const email = user.email;
-      const existingUser = await usersCollection.findOne({ email });
-      if (existingUser) {
-        if (existingUser.status === "blocked") {
+      try {
+        const result = await usersCollection.insertOne(user);
+        res.send(result);
+      } catch (err) {
+        if (err.code === 11000) {
+          const existingUser = await usersCollection.findOne({ email });
+
+          if (existingUser?.status === "blocked") {
+            return res
+              .status(403)
+              .send({ message: "You are blocked. Contact support." });
+          }
           return res
-            .status(404)
-            .send({ message: "You are blocked. Contact support." });
-        } else {
-          return res.status(404).send({
-            message: "You are already registered. Please login.",
-          });
+            .status(409)
+            .send({ message: "You are already registered. Please login." });
         }
+        return res
+          .status(500)
+          .send({ message: "Registration failed", error: err });
       }
-      const result = await usersCollection.insertOne(user);
-      res.send(result);
     });
     app.post("/login", async (req, res) => {
       const { email, password } = req.body;
