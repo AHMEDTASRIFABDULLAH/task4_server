@@ -115,6 +115,15 @@ async function run() {
       );
       res.send(result);
     });
+    app.patch("/update-time", async (req, res) => {
+      const { email, logoutAt } = req.body;
+      const result = await usersCollection.updateOne(
+        { email: email },
+        { $set: { createdAt: logoutAt } }
+      );
+
+      res.send(result);
+    });
   } finally {
   }
 }
